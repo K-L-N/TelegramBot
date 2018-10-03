@@ -1,15 +1,17 @@
 import telebot
 import pyowm
-import constants
+import json
 
-bot = telebot.TeleBot(constants.token)
-bot.send_message(422243813, "123")
+with open('constants.json') as file:
+    constants = json.load(file)
+bot = telebot.TeleBot(constants["bot_token"])
 last_weather = False
 
 
 def get_weather(city):
+    global constants
     try:
-        weather = pyowm.OWM("608b9e48a283cfb2c1fe98c0b67c73ba").weather_at_place(
+        weather = pyowm.OWM(constants["owm_token"]).weather_at_place(
             city).get_weather()
         return ("In " + city + " weather is " + str(weather.get_status()) +
                 ", the temperature is " +
@@ -20,13 +22,13 @@ def get_weather(city):
 
 @bot.message_handler(commands=['help'])
 def handle_help(msg):
-    bot.send_message(msg.chat.id, constants.help_msg)
+    bot.send_message(msg.chat.id, constants["help_msg"])
 
 
 @bot.message_handler(commands=['weather'])
 def handle_weather(msg):
     global last_weather
-    bot.send_message(msg.chat.id, constants.weather_msg)
+    bot.send_message(msg.chat.id, constants["weather_msg"])
     last_weather = True
 
 
@@ -39,11 +41,11 @@ def handle_text(msg):
                 weather = get_weather(msg.text)
                 bot.send_message(msg.chat.id, weather)
                 break
-            except:
-                bot.send_message(msg.chat.id, constants.bad_city_msg)
+            except pyowm.exceptions.not_found_error.NotFoundError:
+                bot.send_message(msg.chat.id, constants["bad_city_msg"])
         last_weather = False
     else:
-        bot.send_message(msg.chat.id, constants.std_msg)
+        bot.send_message(msg.chat.id, constants["std_msg"])
 
 
 bot.polling(none_stop=True, interval=0)
