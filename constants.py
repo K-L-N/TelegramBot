@@ -1,5 +1,0 @@
-token = "630052478:AAERpTlt2Vv_Q4f2mEKBwz-i73Xo3cYygrU"
-help_msg = "/weather - find out the weather\n"
-weather_msg = "Please, write name of the city.\n"
-bad_city_msg = "Can't find this city.. Please, write name of the city again."
-std_msg = "I don't understand you, please use the commands.\n"
