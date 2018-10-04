@@ -1,4 +1,6 @@
-import telebot
+from aiogram import Bot, types
+from aiogram.dispatcher import Dispatcher
+from aiogram.utils import executor
 import pyowm
 import json
 import logging
@@ -10,7 +12,8 @@ logging.basicConfig(
 with open('constants.json') as file:
     constants = json.load(file)
     logging.info("Json file with constants loaded")
-bot = telebot.TeleBot(constants["bot_token"])
+bot = Bot(token=constants["bot_token"])
+dp = Dispatcher(bot)
 last_weather = False
 
 
@@ -26,45 +29,47 @@ def get_weather(city):
         raise error
 
 
-@bot.message_handler(commands=['help'])
-def handle_help(msg):
-    logging.info("Get \"help\" command from chat: {}".format(msg.chat.id))
-    bot.send_message(msg.chat.id, constants["help_msg"])
-    logging.info("Send help message to chat: {}".format(msg.chat.id))
+@dp.message_handler(commands=['help'])
+async def handle_help(msg: types.Message):
+    logging.info("Get \"help\" command from user: {}".format(msg.from_user.id))
+    await bot.send_message(msg.from_user.id, constants["help_msg"])
+    logging.info("Send help message to user: {}".format(msg.from_user.id))
 
 
-@bot.message_handler(commands=['weather'])
-def handle_weather(msg):
+@dp.message_handler(commands=['weather'])
+async def handle_weather(msg: types.Message):
     global last_weather
-    logging.info("Get \"weather\" command from chat: {}".format(msg.chat.id))
-    bot.send_message(msg.chat.id, constants["weather_msg"])
-    logging.info("Send weather message to chat: {}".format(msg.chat.id))
+    logging.info(
+        "Get \"weather\" command from user: {}".format(msg.from_user.id))
+    await bot.send_message(msg.from_user.id, constants["weather_msg"])
+    logging.info("Send weather message to user: {}".format(msg.from_user.id))
     last_weather = True
 
 
-@bot.message_handler(content_types=['text'])
-def handle_text(msg):
+@dp.message_handler()
+async def handle_text(msg: types.Message):
     global last_weather
-    logging.info("Get message from chat: {}".format(msg.chat.id))
+    logging.info("Get message from user: {}".format(msg.from_user.id))
     if last_weather:
-        while True:
-            try:
-                weather = get_weather(msg.text)
-                bot.send_message(msg.chat.id, weather)
-                logging.info(
-                    "Send message with weather in city to chat: {}".format(
-                        msg.chat.id)
-                )
-                break
-            except pyowm.exceptions.not_found_error.NotFoundError:
-                bot.send_message(msg.chat.id, constants["bad_city_msg"])
-                logging.warning(
-                    "Get bad name of city from chat: {}".format(msg.chat.id)
-                )
-        last_weather = False
+        try:
+            weather = get_weather(msg.text)
+            await bot.send_message(msg.from_user.id, weather)
+            logging.info(
+                "Send message with weather in city to user: {}".format(
+                    msg.from_user.id)
+            )
+            last_weather = False
+        except pyowm.exceptions.not_found_error.NotFoundError:
+            await bot.send_message(msg.from_user.id, constants["bad_city_msg"])
+            logging.warning(
+                "Get bad name of city from user: {}".format(
+                    msg.from_user.id)
+            )
     else:
-        bot.send_message(msg.chat.id, constants["std_msg"])
-        logging.info("Send standart message to chat: {}".format(msg.chat.id))
+        await bot.send_message(msg.from_user.id, constants["std_msg"])
+        logging.info(
+            "Send standart message to user: {}".format(msg.from_user.id))
 
 
-bot.polling(none_stop=True, interval=0)
+if __name__ == '__main__':
+    executor.start_polling(dp)
